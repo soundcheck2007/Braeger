@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <% content_for :title, "Braeger Woodworking Inc. | Doors" %>
+  <title><%= content_for :title %></title>
+</head>
+<header class="navbar navbar-fixed-top navbar-inverse">
+  <div class="navbar-inner">
+    <div class="container">
+      <%= link_to "Braeger Woodworking", root_path, id: "logo" %>
+      <nav>
+        <ul class="nav pull-right">
+          <li><%= link_to "Home", root_path %></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>
+<form action="/doors" id="doors_form" method="post">
+  <%= hidden_field_tag "project", "doors" %>
+  <%= render 'layouts/job_header' %>
+  <br />
+  <div id="main_body">
+    <%= render 'layouts/body_header' %>
+  </div>
+  <%= render 'layouts/button_footer' %>
+</form>
+<script>
+  
+  function add_options(){
+    $('#style_select_' + row_count).append('<option value="0">Arch</option>');
+    $('#style_select_' + row_count).append('<option value="1">Cathedral</option>');
+    $('#style_select_' + row_count).append('<option value="2">Custom</option>');
+    $('#style_select_' + row_count).append('<option value="3">Glass Arch</option>');
+    $('#style_select_' + row_count).append('<option value="4">Glass Cathedral</option>');
+    $('#style_select_' + row_count).append('<option value="5">Glass Square</option>');
+    $('#style_select_' + row_count).append('<option value="6">Square</option>');
+  }
+
+  function calculate(){
+    arr_total = [];
+    arr_denom = [];
+    $('#txt_totals').val("");
+    var qty = op = style = panel_msg = style_rail_msg = bottom = "";
+    for(var i = 0; i < row_count; i++){
+      qty = $('#qty_' + i).val();
+      op = $('#size_' + i).val();
+      if(qty == "" && op == "") {
+        $('#style_rail_info_' + i).html("");
+        $('#panel_info_' + i).html("");
+        $('#border_info_' + i).val("");
+        $('#center_info_' + i).val("");
+        $('#notes_' + i).parent().height(50);
+        $('#notes_' + i).val("");
+        check_existing_id(i);
+      }
+      if (!(qty == 0 || op == "") && op.match(/x/g).length == 1){
+        style = $('#style_select_' + i).val();
+        //skip processing when custom 
+        if (style == 2) {
+          continue;
+        }
+        panel_msg = "&nbsp;&nbsp;&nbsp;&nbsp;Glass";
+        style_rail_msg = get_style_and_rail(qty, op.toUpperCase(), style);
+        if(style != 2 && style != 3 && style != 4 && style != 5){
+          panel_msg = get_panel_cabinets(qty, op.toUpperCase());
+        }
+        $('#style_rail_info_' + i).html(style_rail_msg);
+        $('#panel_info_' + i).html(panel_msg);
+        $('#border_info_' + i).val(style_rail_msg);
+        $('#center_info_' + i).val(panel_msg);
+        $('#style_rail_info_' + i).css({"color": "black"});
+        $('#panel_info_' + i).css({"color": "black"});
+        if(extra_room){
+          $('#notes_' + i).parent().height(70);
+          extra_room = false;
+        }
+      }
+    }
+
+    add_custom_values_to_totals();
+  }
+
+  function open_job_check(){
+    var job_id = <%= @job_header[:id] %>;
+    var regex = new RegExp(/<br/g);
+    var breaks = 0;
+    $('#created_job').val(job_id);
+    if(job_id > 0){
+      var job_info = <%= @job_details.to_json.html_safe %>;
+      for(var i = 0; i < job_info.length; i++){
+        if((i % 10) == 0 && i != 0){
+          add_rows();
+        }
+
+        $('#nbr_' + i).val(job_info[i].door_no);
+        $('#qty_' + i).val(job_info[i].door_qty);
+        $('#size_' + i).val(job_info[i].door_size);
+        $('#style_select_' + i).val(job_info[i].door_style);
+        $('#style_rail_info_' + i).html(job_info[i].style_rail_info);
+        $('#border_info_' + i).val(job_info[i].style_rail_info);
+        $('#panel_info_' + i).html(job_info[i].panel_info);
+        $('#center_info_' + i).val(job_info[i].panel_info);
+        $('#notes_' + i).val(job_info[i].notes);
+        
+        breaks = job_info[i].style_rail_info.match(regex).length;
+        if(breaks > 1) {
+          $('#notes_' + i).parent().height(50 + ((breaks - 1) * 20));
+        }
+        //Add custom values to array for totals
+        if ("<%= @job_header[:project] %>" == "doors"){
+          if (job_info[i].door_style == 2) {
+            var custom_info = job_info[i].style_rail_info.split("<br />");
+            var height = width = 0;
+            //add stiles to custom totals
+            height = parseFloat(custom_info[0].substring(custom_info[0].indexOf("-") + 1, custom_info[0].indexOf("X") - 1));
+            width = parseFloat(custom_info[0].substring(custom_info[0].indexOf("X") + 1, custom_info[0].indexOf("S") - 1));
+            add_custom_values(i.toString(), job_info[i].door_qty * 2, height, width);
+
+            //add heights to custom totals
+            height = parseFloat(custom_info[1].substring(custom_info[1].indexOf("-") + 1, custom_info[1].indexOf("X") - 1));
+            width = parseFloat(custom_info[1].substring(custom_info[1].indexOf("X") + 1, custom_info[1].indexOf("T") - 1));
+            add_custom_values(i.toString(), job_info[i].door_qty, height, width);
+
+            //add widths to custom totals
+            height = parseFloat(custom_info[2].substring(custom_info[2].indexOf("-") + 1, custom_info[2].indexOf("X") - 1));
+            width = parseFloat(custom_info[2].substring(custom_info[2].indexOf("X") + 1, custom_info[2].indexOf("B") - 1));
+            add_custom_values(i.toString(), job_info[i].door_qty, height, width);
+          }
+        }
+      }
+    }
+  }
+  
+  //function add_custom_values(id, qty, height, width)
+</script>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <% content_for :title, "Braeger Woodworking Inc. | Drawer Fronts" %>
+  <title><%= content_for :title %></title>
+</head>
+<header class="navbar navbar-fixed-top navbar-inverse">
+  <div class="navbar-inner">
+    <div class="container">
+      <%= link_to "Braeger Woodworking", root_path, id: "logo" %>
+      <nav>
+        <ul class="nav pull-right">
+          <li><%= link_to "Home", root_path %></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>
+<form action="/drawer_fronts" id="drawer_fronts_form" method="post">
+  <%= hidden_field_tag "project", "drawer_fronts" %>
+  <%= render 'layouts/job_header' %>
+  <br />
+  <div id="main_body">
+    <%= render 'layouts/drawer_front_body_header' %>
+  </div>
+  <%= render 'layouts/button_footer' %>
+</form>
+
+<script>
+
+  function add_options(){
+    $('#style_select_' + row_count).append('<option value="0">5-piece, 1.25</option>');
+    $('#style_select_' + row_count).append('<option value="1">5-piece, 1.50</option>');
+    $('#style_select_' + row_count).append('<option value="2">5-piece, 1.75</option>');
+    $('#style_select_' + row_count).append('<option value="3">5-piece, 2.25</option>');
+    $('#style_select_' + row_count).append('<option value="4">Panel Front</option>');
+    $('#style_select_' + row_count).append('<option value="5">Slab</option>');
+  }
+  
+  function calculate(){
+    var qty = op = style = pnlmsg = pnlinfo = "";
+    arr_total = [];
+    arr_denom = [];
+    $('#txt_totals').val("");
+    for(var i = 0; i < row_count; i++){
+      qty = $('#qty_' + i).val();
+      op = $('#size_' + i).val();
+      if(qty == "" && op == "") {
+        $('#style_rail_info_' + i).html("");
+        $('#panel_info_' + i).html("");
+        $('#border_info_' + i).val("");
+        $('#center_info_' + i).val("");
+        $('#notes_' + i).parent().height(50);
+        $('#notes_' + i).val("");
+      }
+      style = $('#style_select_' + i).val();
+      if (!(style == "4" || style == "5" || qty == 0 || op == "")  && op.match(/x/g).length == 1){
+        pnlmsg = get_panel_fronts(qty, op.toUpperCase(), style);
+        //panel info is after the pipe
+        $('#style_rail_info_' + i).html(pnlmsg.substring(0, pnlmsg.indexOf("|")));
+        $('#panel_info_' + i).html(pnlmsg.substring(pnlmsg.indexOf("|") + 1));
+        $('#border_info_' + i).val(pnlmsg.substring(0, pnlmsg.indexOf("|")));
+        $('#center_info_' + i).val(pnlmsg.substring(pnlmsg.indexOf("|") + 1));
+        $('#style_rail_info_' + i).css({"color": "black"});
+        $('#panel_info_' + i).css({"color": "black"});
+      } else if(style == "4" || style == "5") {
+        $('#style_rail_info_' + i).html("");
+        $('#panel_info_' + i).html("");
+      }
+    }
+  }
+  
+  function open_job_check(){
+    var job_id = <%= @job_header[:id] %>;
+    var regex = new RegExp(/<br/g);
+    var breaks = 0;
+    $('#created_job').val(job_id);
+    if(job_id > 0){
+      var job_info = <%= @job_details.to_json.html_safe %>;
+      for(var i = 0; i < job_info.length; i++){
+        if((i % 10) == 0 && i != 0){
+          add_rows();
+        }
+
+        $('#nbr_' + i).val(job_info[i].door_no);
+        $('#qty_' + i).val(job_info[i].door_qty);
+        $('#size_' + i).val(job_info[i].door_size);
+        $('#style_select_' + i).val(job_info[i].door_style);
+        $('#style_rail_info_' + i).html(job_info[i].style_rail_info);
+        $('#border_info_' + i).val(job_info[i].style_rail_info);
+        $('#panel_info_' + i).html(job_info[i].panel_info);
+        $('#center_info_' + i).val(job_info[i].panel_info);
+        $('#notes_' + i).val(job_info[i].notes);
+        
+        breaks = job_info[i].style_rail_info.match(regex).length;
+        if(breaks > 1) {
+          $('#notes_' + i).parent().height(70);
+        }
+      }
+    }
+  }
+  
+</script>
